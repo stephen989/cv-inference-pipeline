@@ -133,3 +133,37 @@ def parallel_compare_images(i, files):
         diff, _ = compare_ssim(image_gray1, image_gray2, full=True)
     print(f'Similarity between {files[i]} and {files[i + 1]}: {diff}', end="\r")
     return diff
+
+def split_video_frames(video_name, extension, source_folder, dest_folder):
+    print("Checking if video already split", end="\r")
+    path = f'{dest_folder}/frame00001.png'
+    if os.path.exists(path):
+        text_output = f'Video: {video_name} already split. Skipping split.'
+        print(text_output)
+        return
+    os.mkdir(str(dest_folder), exist_ok=True)
+
+    video_location = f'{source_folder}/{video_name}.{extension}'
+    video_capture = cv2.VideoCapture(video_location)
+    saved_frame_name = 1
+
+    while True:
+        print("Frame: " + format(saved_frame_name, '05d'), end="\r")
+        success, frame = video_capture.read()
+
+        if success:
+            cv2.imwrite(f"{str(dest_folder)}/frame{format(saved_frame_name, '05d')}.png", frame)
+            saved_frame_name += 1
+        else:
+            break
+    print("Split video frames")
+
+LABELS = ['person', 'bicycle', 'car', 'motorbike', 'aeroplane', 'bus', 'train', 'truck', 'boat', 'traffic light',
+          'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep', 'cow',
+          'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee',
+          'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+          'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+          'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair', 'sofa',
+          'pottedplant', 'bed', 'diningtable', 'toilet', 'tvmonitor', 'laptop', 'mouse', 'remote', 'keyboard',
+          'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
+          'teddy bear', 'hair drier', 'toothbrush']

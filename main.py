@@ -1,4 +1,3 @@
-from video_processing import *
 from model_setup import *
 os.chdir("C:\\Users\\RW154JK\\OneDrive - EY\\Desktop\\Kerry")
 
@@ -24,7 +23,7 @@ def kitti_label_check(image_dir, label_dir, image_extension, label_extension):
     for image_file in sorted(glob.glob(f'{image_dir}/*.{image_extension}')):
         print(f'Detecting on Image: {image_file}', end='\r')
         output = {'Frame': image_file}
-        detections = detect_objects(image_file)
+        detections = detect_objects(model, image_file)
 
         fol_len = len(image_dir)
         ext_len = len(image_extension) + 1
@@ -59,12 +58,12 @@ def kitti_label_check(image_dir, label_dir, image_extension, label_extension):
     return {'Classification Information': detect_list}
 
 
-"""## KITTI Sequential Label Workflow"""
+def model_output(image_dir, label_file, image_extension, label_extension):
+    model = load_model()
 
 
 def kitti_sequence_label_check(image_dir, label_file, image_extension, label_extension):
     detect_list = []
-
     # Import Label File
     label_file = f'{label_file}.{label_extension}'
     print(f'Reading GT File: {label_file}              ', end='\r')
@@ -110,8 +109,6 @@ def kitti_sequence_label_check(image_dir, label_file, image_extension, label_ext
     return {'Classification Information': detect_list}
 
 
-"""## Images Workflow"""
-
 
 
 def main(project_folder, image_folder, image_extension, label_folder, label_extension, dataset_format):
@@ -124,10 +121,8 @@ def main(project_folder, image_folder, image_extension, label_folder, label_exte
     label_dir = f'{project_folder}/{label_folder}'
     yaml_val.update(remove_blurry_images(image_dir, image_extension))
     yaml_val.update(remove_duplicates(image_dir, image_extension))
-    elif dataset_format == 'KITTI':
+    if dataset_format == 'KITTI':
         yaml_val.update(kitti_label_check(image_dir, label_dir, image_extension, label_extension))
-    elif dataset_format == 'OCT':
-        yaml_val.update(oct_label_check(image_dir, label_dir, image_extension, label_extension))
     elif dataset_format == 'KITTI_sequence':
         yaml_val.update(kitti_sequence_label_check(image_dir, label_dir, image_extension, label_extension))
     remaining_frames = sorted(glob.glob(f'{image_dir}/*.{image_extension}'))

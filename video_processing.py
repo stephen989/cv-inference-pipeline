@@ -1,43 +1,33 @@
-
 from skimage.metrics import structural_similarity as compare_ssim
 from collections import Counter
 import numpy as np
-import tensorflow as tf
-from PIL import Image
 import ffmpeg, shutil, glob
 import multiprocessing as mp
-import pandas as pd
 import re
-# import nest_asyncio, uvicorn, os, pathlib
 import yaml
-import cv2#, wandb
+import cv2  # , wandb
 import os
 import pathlib
 
 
-def split_video_frames(video_name, extension, source_folder, dest_folder):
-    print("Checking if video already split", end="\r")
-    path = f'{dest_folder}/frame00001.png'
-    if os.path.exists(path):
-        text_output = f'Video: {video_name} already split. Skipping split.'
-        print(text_output)
-        return
-    os.mkdir(str(dest_folder), exist_ok=True)
+def split_video(video):
+    """
 
-    video_location = f'{source_folder}/{video_name}.{extension}'
-    video_capture = cv2.VideoCapture(video_location)
-    saved_frame_name = 1
-
-    while True:
-        print("Frame: " + format(saved_frame_name, '05d'), end="\r")
+    :param video: location
+    :return: array of frames
+    """
+    frames = []
+    video_capture = cv2.VideoCapture(video)
+    success, frame = video_capture.read()
+    while success:
+        frames.append(frame)
         success, frame = video_capture.read()
 
-        if success:
-            cv2.imwrite(f"{str(dest_folder)}/frame{format(saved_frame_name, '05d')}.png", frame)
-            saved_frame_name += 1
-        else:
-            break
-    print("Split video frames")
+    return np.array(frames)[:5]
+
+
+
+
 
 def parallel_laplacian_variance(file):
     print(file + "             ", end="\r")
@@ -45,6 +35,35 @@ def parallel_laplacian_variance(file):
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     laplacian = cv2.Laplacian(img_gray, cv2.CV_64F).var()
     return laplacian
+
+
+def frame_laplacian(frame):
+    img_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    laplacian = cv2.Laplacian(img_gray, cv2.CV_64F).var()
+    return laplacian
+
+
+def remove_blurry_frames(frames):
+    """
+    remove blurry frames from array of frames. no impact on stored video
+    :param frames: array of frames
+    :return: frames: kept frames
+             output_dict: dictionary containing details of kept/removed frames
+    """
+    blurriness = np.array([frame_laplacian(frame) for frame in frames])
+    median_blur = float(np.median(blurriness))
+    # min_blur = float(np.min(blurriness))
+    # max_blur = float(np.max(blurriness))
+    adjusted_cutoff = 0.95 * median_blur
+    # frames = np.array(frames)[median_blur]
+    keep_idx = np.where(blurriness > adjusted_cutoff)
+    remove_idx = np.where(blurriness <= adjusted_cutoff)
+    frames = frames[keep_idx]
+
+    output_dict = {"summary": f"kept {len(keep_idx[0])} of {len(keep_idx[0]) + len(remove_idx[0])} frames",
+                   "kept frames": keep_idx[0].tolist(),
+                   "removed frames": remove_idx[0].tolist()}
+    return frames, output_dict
 
 
 def remove_blurry_images(folder_name, extension, delete_frames=False):
@@ -97,6 +116,7 @@ def remove_blurry_images(folder_name, extension, delete_frames=False):
             'Median Laplacian Variance': median_blur, 'Minimum Laplacian Variance': min_blur,
             'Maximum Laplacian Variance': max_blur, 'Noisy Frame Ratio': blur_ratio, 'Laplacian Cutoffs': cutoffs}
 
+
 def compare_images(i, files):
     image1 = cv2.imread(files[i])
     image2 = cv2.imread(files[i + 1])
@@ -109,6 +129,10 @@ def compare_images(i, files):
         diff, _ = compare_ssim(image_gray1, image_gray2, full=True)
     return diff
 
+
+
+
+
 def remove_duplicates(folder_name, extension, delete_frames=False):
     files = sorted(glob.glob(f'{folder_name}/*.{extension}'))
     print("Removing Duplicate and Highly Similar Frames\nCalculating Frame Similarities")
@@ -120,8 +144,6 @@ def remove_duplicates(folder_name, extension, delete_frames=False):
     diff = [compare_images(i, files) for i in range(len(files) - 1)]
 
     # pool.close()
-
-
 
     median_diff = float(np.median(diff))
     # wandb.log({'Individual Frame Similarities': diff, 'Batch Median Frame Similarity': median_diff})
@@ -153,7 +175,7 @@ def remove_duplicates(folder_name, extension, delete_frames=False):
         if diff[i] > 0.99:
             # print("Deleting " + files[i] + " - Similarity: " + str(diff[i]), end="\r")
             removed_files.append(files[i])
-            if delete_frames == True:
+            if delete_frames:
                 os.remove(files[i])
             # wandb.log({'Duplicates Similarity': diff})
             count += 1
@@ -164,3 +186,34 @@ def remove_duplicates(folder_name, extension, delete_frames=False):
     return {'SSIM Threshold Remainders': remainders, 'Removed Duplicate Frame Count': count,
             'Removed Duplicate Frames': removed_files, 'Median Frame Similarity': median_diff,
             'Duplicate Frame Ratio': duplicate_ratio, 'Similarity Cutoffs': cutoffs}
+
+
+def draw_boxes(frame, boxes):
+    for (p1, p2) in boxes:
+        cv2.rectangle(frame, tuple(p1), tuple(p2), color=(0, 0, 255))
+        # while True:
+        #     cv2.imshow("Video feed", frame)
+        #     if cv2.waitKey(1) & 0xFF == ord('q'):
+        #         break
+    return frame
+
+def create_video_writer(video_width, video_height, video_stream, output_path):
+    """Creates video writer"""
+    # Getting the fps of the source video
+    video_fps = video_stream.get(cv2.CAP_PROP_FPS)
+    # initialize our video writer
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    return cv2.VideoWriter(output_path, fourcc, video_fps,
+                           (video_width, video_height), True)
+
+def create_output_video(yaml_file, frames, output_video, video):
+    with open(yaml_file) as stream:
+        outputs_dict = yaml.safe_load(stream)
+    video_stream = cv2.VideoCapture(video)
+    video_height, video_width, _ = frames[0].shape
+    writer = create_video_writer(video_width, video_height, video_stream, output_video)
+    for i, frame in enumerate(frames):
+        frame = draw_boxes(frame, outputs_dict["Model Outputs"][i]["detection_boxes"])
+        writer.write(frame)
+    writer.release()
+
