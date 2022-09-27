@@ -1,9 +1,6 @@
 from skimage.metrics import structural_similarity as compare_ssim
-from collections import Counter
 import numpy as np
-import ffmpeg, shutil, glob
-import multiprocessing as mp
-import re
+import glob
 import yaml
 import cv2  # , wandb
 import os
@@ -24,9 +21,6 @@ def split_video(video):
         success, frame = video_capture.read()
 
     return np.array(frames)[:5]
-
-
-
 
 
 def parallel_laplacian_variance(file):

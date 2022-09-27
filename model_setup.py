@@ -29,10 +29,19 @@ def load_model():
     model = model.signatures['serving_default']
     return model
 
-def load_yolo(version='yolov5s'):
+
+def load_yolo(name='yolov5s',
+              weights_path="yolov5/runs/train/yolov5s_results15/weights/best.pt",
+              model_version="default"):
     import torch
-    model = torch.hub.load('ultralytics/yolov5', version)
-    return model, version, 'yolo'
+    if weights_path == "default":
+        print("Loading default weights")
+        model = torch.hub.load('ultralytics/yolov5', model_version)
+    else:
+        print("Loading custom weights")
+        model = torch.hub.load('ultralytics/yolov5', 'custom', path=weights_path)
+    print("Model loaded")
+    return model, model_version, 'yolo'
 
 def load_tensorflow(model_url = MODEL_URL):
     import tensorflow as tf
@@ -51,8 +60,12 @@ def load_tensorflow(model_url = MODEL_URL):
     return model, model_name, model_type
 
 class Model:
-    def __init__(self, load_fn):
-        self.model, self.name, self.type = load_fn()
+    def __init__(self, name, weights, version):
+        self.load_fns = {
+            'yolo': load_yolo,
+            'resnet': load_tensorflow
+        }
+        self.model, self.name, self.type = self.load_fns[name]('yolo', weights, version)
 
         self.call_function_mapping = {
             'resnet50': self.resnet_forward,
