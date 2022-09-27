@@ -1,3 +1,5 @@
+import torch
+
 from video_processing import *
 
 MODEL_URL = 'http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz'
@@ -34,12 +36,13 @@ def load_yolo(name='yolov5s',
               weights_path="yolov5/runs/train/yolov5s_results15/weights/best.pt",
               model_version="default"):
     import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if weights_path == "default":
         print("Loading default weights")
-        model = torch.hub.load('ultralytics/yolov5', model_version)
+        model = torch.hub.load('ultralytics/yolov5', model_version).to(device)
     else:
         print("Loading custom weights")
-        model = torch.hub.load('ultralytics/yolov5', 'custom', path=weights_path)
+        model = torch.hub.load('ultralytics/yolov5', 'custom', path=weights_path).to(device)
     print("Model loaded")
     return model, model_version, 'yolo'
 
@@ -76,8 +79,8 @@ class Model:
         return self.call_function_mapping[self.type](img)
 
     def yolo_forward(self, img):
-        results = self.model(img)  # batch of images
-        results = results.pred[0].numpy()
+        results_device = self.model(img)  # batch of images
+        results = results_device.pred[0].to('cpu').numpy()
 
         coords = results[:,:4]
         coords = coords.reshape(coords.shape[:-1] + (2, 2)).astype("int")

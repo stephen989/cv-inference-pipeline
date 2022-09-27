@@ -1,0 +1,7 @@
+python train.py --img 416 --batch 1 --epochs 10 --data .
+
+
+./minidata/data.yaml --cfg ./models/custom_yolov5s.yaml --weights '' --name yolov5s_results  --cache
+
+
+! python test_pipeline.py --video_input test.mp4 --weights default --model_version yolo_v5s
