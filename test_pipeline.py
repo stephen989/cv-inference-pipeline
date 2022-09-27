@@ -102,7 +102,7 @@ def main(opts):
 
 
 
-def parse_opt():
+def parse_opt(known=False):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--video_input', type=str, default='')

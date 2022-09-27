@@ -1,5 +1,5 @@
 from model_setup import *
-os.chdir("C:\\Users\\RW154JK\\OneDrive - EY\\Desktop\\Kerry")
+os.chdir("../")
 
 def clean_unlabeled_video(video_name, bucket_location, extension, upload_frames=False):
     folder_name = video_name
