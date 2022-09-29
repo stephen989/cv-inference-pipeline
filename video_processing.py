@@ -1,10 +1,40 @@
 from skimage.metrics import structural_similarity as compare_ssim
 import numpy as np
-import glob
+from glob import glob
 import yaml
 import cv2  # , wandb
 import os
+from PIL import Image
 import pathlib
+
+def video_prepocessing(video):
+    """
+    :param video: video location
+    :return: array of processed frames
+    """
+    print("Preprocessing video")
+    # split into frames
+    frames = split_video(video)
+    # remove blurry
+    # frames, blurry_output = remove_blurry_frames(frames)
+    # remove duplicates
+    pass
+
+    # outputs = [blurry_output]
+    outputs = []
+    print("Complete")
+    return frames, outputs
+
+
+def image_preprocessing(image_dir, image_ext):
+    image_names = glob(f"{image_dir}/*{image_ext}")
+    images = np.array([cv2.imread(file) for file in image_names[:5]], dtype=object)
+    images = [cv2.cvtColor(image, cv2.COLOR_BGR2RGB) for image in images]
+    if len(images) == 0:
+        raise ValueError(f"no images found in {image_dir}/*{image_ext}")
+    # images, blurry_output = remove_blurry_frames(images)
+    outputs = []
+    return images, outputs, [image_name.split("\\")[-1] for image_name in image_names]
 
 
 def split_video(video):
@@ -211,3 +241,13 @@ def create_output_video(yaml_file, frames, output_video, video):
         writer.write(frame)
     writer.release()
 
+
+def create_output_images(yaml_file, frames, image_output_dir):
+    with open(yaml_file) as stream:
+        outputs_dict = yaml.safe_load(stream)
+    image_names = outputs_dict["Model Outputs"].keys()
+    for image_name, frame in zip(image_names, frames):
+        frame = draw_boxes(frame, outputs_dict["Model Outputs"][image_name]["detection_boxes"])
+        img = Image.fromarray(frame)
+        img_name = f"{outputs_dict['Output directory']}/{image_name}.{outputs_dict['Extension']}"
+        img.save(img_name)

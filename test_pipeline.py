@@ -1,50 +1,67 @@
 import argparse
+import os
 from model_setup import *
-os.chdir("C:\\Users\\RW154JK\\OneDrive - EY\\Desktop\\Kerry")
+os.chdir("..")
 
 
-def test_preproc(video):
-    """
-    :param video: video location
-    :return: array of processed frames
-    """
-    print("Preprocessing video")
-    # split into frames
-    frames = split_video(video)
-    # remove blurry
-    frames, blurry_output = remove_blurry_frames(frames)
-    # remove duplicates
-    pass
+def image_main(opts):
+    image_dir = opts.image_dir
+    image_ext = opts.image_ext
+    image_output_dir = opts.image_output_dir
+    video = opts.video_input
+    output_video = opts.video_output
+    output_yaml = opts.yaml_output
+    model = opts.model
+    weights = opts.weights
 
-    outputs = [blurry_output]
-    print("Complete")
-    return frames, outputs
+    os.makedirs(image_output_dir, exist_ok=True)
 
 
-def test_pipeline(video,
-                  output_video,
-                  output_yaml,
-                  load_model_fn,
-                  draw=False):
-    """
-    :param video: input video file path
-    :param output_video: output video file path
-    :param output_yaml: output yaml file path
-    :param load_model_fn: function to load and return model to be used
-    :param draw: if true, draw on image
-    :return: True if success
-    """
-
-    # preprocessing - split into frame, remove blurry and similar frames ???
-    frames, outputs = test_preproc(video)
-    # load model
-    model = Model(load_model_fn)
     # feed through model one by one
-    outputs_dict = {"File": video,
-                    "Output Video": output_video,
-                    "Model": model.type,
+    frames, outputs, image_names = image_preprocessing(image_dir, image_ext)
+    outputs_dict = {"Directory": image_dir,
+                    "Extension": image_ext,
+                    "Output directory": image_output_dir,
+                    "Model": model,
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
+
+    model = Model(model, weights, opts.model_version)
+
+    print("Feeding model")
+    for image_name, frame in zip(image_names, frames):
+        output = model(frame)
+        outputs_dict["Model Outputs"][image_name] = output
+    print("Complete")
+    # write to yaml file
+    with open(output_yaml, 'w') as y:
+        yaml.dump(outputs_dict, y)
+
+
+    create_output_images(output_yaml, frames,  image_output_dir)
+
+
+
+def video_main(opts):
+    image_dir = opts.image_dir
+    image_ext = opts.image_ext
+    image_output_dir = opts.image_output_dir
+    video = opts.video_input
+    output_video = opts.video_output
+    output_yaml = opts.yaml_output
+    model = opts.model
+    weights = opts.weights
+
+    frames, outputs = video_prepocessing(video)
+    outputs_dict = {"File": video,
+                    "Output Video": output_video,
+                    "Model": model,
+                    "Preprocessing output": outputs,
+                    "Model Outputs": dict()}
+
+    model = Model(model, weights, opts.model_version)
+    # feed through model one by one
+
     print("Feeding model")
     for i, frame in enumerate(frames):
         output = model(frame)
@@ -53,11 +70,8 @@ def test_pipeline(video,
     # write to yaml file
     with open(output_yaml, 'w') as y:
         yaml.dump(outputs_dict, y)
+    create_output_video(output_yaml, frames, output_video, video)
 
-    if draw:
-        create_output_video(output_yaml, frames, output_video, video)
-
-    return True
 
 def main(opts):
     """
@@ -68,7 +82,9 @@ def main(opts):
     :param draw: if true, draw on image
     :return: True if success
     """
-
+    image_dir = opts.image_dir
+    image_ext = opts.image_ext
+    image_output_dir = opts.image_output_dir
     video = opts.video_input
     output_video = opts.video_output
     output_yaml = opts.yaml_output
@@ -76,27 +92,14 @@ def main(opts):
     weights = opts.weights
 
     # preprocessing - split into frame, remove blurry and similar frames ???
-    frames, outputs = test_preproc(video)
-    # load model
-    model = Model(model, weights, opts.model_version)
-    # feed through model one by one
-    outputs_dict = {"File": video,
-                    "Output Video": output_video,
-                    "Model": model.type,
-                    "Preprocessing output": outputs,
-                    "Model Outputs": dict()}
-    print("Feeding model")
-    for i, frame in enumerate(frames):
-        output = model(frame)
-        outputs_dict["Model Outputs"][i] = output
-    print("Complete")
-    # write to yaml file
-    with open(output_yaml, 'w') as y:
-        yaml.dump(outputs_dict, y)
-
-    create_output_video(output_yaml, frames, output_video, video)
-
+    if video != '':
+        video_main(opts)
+    else:
+        image_main(opts)
     return True
+
+
+
 
 
 
@@ -105,6 +108,9 @@ def main(opts):
 def parse_opt(known=False):
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--image_dir', type=str, default='minidata/test/images')
+    parser.add_argument('--image_ext', type=str, default='.jpg')
+    parser.add_argument('--image_output_dir', type=str, default='output_images')
     parser.add_argument('--video_input', type=str, default='')
     parser.add_argument('--video_output', type=str, default='test_output.mp4')
     parser.add_argument('--yaml_output', type=str, default='test_pipeline.yaml')

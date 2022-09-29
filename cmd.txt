@@ -1,7 +1,11 @@
-python train.py --img 416 --batch 1 --epochs 10 --data .
+python train.py --img 416 --batch 1 --epochs 10 --data ../minidata/data.yaml --cfg ./models/custom_yolov5s.yaml --weights '' --name yolov5s_results  --cache
 
-
-./minidata/data.yaml --cfg ./models/custom_yolov5s.yaml --weights '' --name yolov5s_results  --cache
-
-
+python train.py --img 416 --batch 3 --epochs 50 --data ../minidata/data.yaml --weights yolov5s.pt
 ! python test_pipeline.py --video_input test.mp4 --weights default --model_version yolo_v5s
+
+opt.resume and not check_wandb_resume(opt) and not check_comet_resume(opt) and not opt.evolve
+
+
+do you have any update for me? wtf is going on
+
+tim couldn't do anything for me (bonus but wtf does that even mean). staying for chance to workin in AI team
