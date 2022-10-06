@@ -13,6 +13,7 @@ def image_main(opts):
     output_yaml = opts.yaml_output
     model = opts.model
     weights = opts.weights
+    model_classes = opts.model_classes
 
     os.makedirs(image_output_dir, exist_ok=True)
 
@@ -26,8 +27,8 @@ def image_main(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version)
-
+    model = Model(model, weights, opts.model_version, opts.model_classes)
+    outputs_dict["Model classes"] = model.classes
     print("Feeding model")
     for image_name, frame in zip(image_names, frames):
         output = model(frame)
@@ -36,7 +37,6 @@ def image_main(opts):
     # write to yaml file
     with open(output_yaml, 'w') as y:
         yaml.dump(outputs_dict, y)
-
 
     create_output_images(output_yaml, frames,  image_output_dir)
 
@@ -51,7 +51,7 @@ def video_main(opts):
     output_yaml = opts.yaml_output
     model = opts.model
     weights = opts.weights
-
+    model_classes = opts.model_classes
     frames, outputs = video_prepocessing(video)
     outputs_dict = {"File": video,
                     "Output Video": output_video,
@@ -59,7 +59,8 @@ def video_main(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version)
+    model = Model(model, weights, opts.model_version, opts.model_classes)
+    outputs_dict["Model classes"] = model.classes
     # feed through model one by one
 
     print("Feeding model")
@@ -99,14 +100,7 @@ def main(opts):
     return True
 
 
-
-
-
-
-
-
 def parse_opt(known=False):
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_dir', type=str, default='minidata/test/images')
     parser.add_argument('--image_ext', type=str, default='.jpg')
@@ -117,17 +111,12 @@ def parse_opt(known=False):
     parser.add_argument('--model', type=str, default='yolo')
     parser.add_argument('--model_version', type=str, default='yolov5s')
     parser.add_argument('--weights', type=str, default='default')
+    parser.add_argument('--model_classes', type=str, default='minidata/data.yaml')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
 
 
 if __name__ == "__main__":
-    # test_pipeline("test.mp4",
-    #               "test_output.mp4",
-    #               "test_pipeline.yaml",
-    #               load_yolo,
-    #               True
-    #               )
     opts = parse_opt()
     main(opts)

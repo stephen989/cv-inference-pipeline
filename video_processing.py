@@ -28,8 +28,15 @@ def video_prepocessing(video):
 
 def image_preprocessing(image_dir, image_ext):
     image_names = glob(f"{image_dir}/*{image_ext}")
-    images = np.array([cv2.imread(file) for file in image_names[:5]], dtype=object)
-    images = [cv2.cvtColor(image, cv2.COLOR_BGR2RGB) for image in images]
+    images_list = np.array([cv2.imread(file) for file in image_names], dtype=object)
+    images = []
+
+
+    for image in images_list:
+        try:
+            images.append(cv2.cvtColor(np.array(image, dtype='uint8'), cv2.COLOR_BGR2RGB))
+        except:
+            print("oof")
     if len(images) == 0:
         raise ValueError(f"no images found in {image_dir}/*{image_ext}")
     # images, blurry_output = remove_blurry_frames(images)
@@ -43,6 +50,7 @@ def split_video(video):
     :param video: location
     :return: array of frames
     """
+    frames = []
     frames = []
     video_capture = cv2.VideoCapture(video)
     success, frame = video_capture.read()
@@ -212,9 +220,12 @@ def remove_duplicates(folder_name, extension, delete_frames=False):
             'Duplicate Frame Ratio': duplicate_ratio, 'Similarity Cutoffs': cutoffs}
 
 
-def draw_boxes(frame, boxes):
-    for (p1, p2) in boxes:
+def draw_boxes(frame, model_output, model_classes):
+    boxes = model_output['detection_boxes']
+    classes = model_output['detection_classes']
+    for (p1, p2), class_ in zip(boxes, classes):
         cv2.rectangle(frame, tuple(p1), tuple(p2), color=(0, 0, 255))
+        cv2.putText(frame, model_classes[class_], (p1[0], p1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
         # while True:
         #     cv2.imshow("Video feed", frame)
         #     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -246,8 +257,13 @@ def create_output_images(yaml_file, frames, image_output_dir):
     with open(yaml_file) as stream:
         outputs_dict = yaml.safe_load(stream)
     image_names = outputs_dict["Model Outputs"].keys()
+    model_classes = outputs_dict['Model classes']
     for image_name, frame in zip(image_names, frames):
-        frame = draw_boxes(frame, outputs_dict["Model Outputs"][image_name]["detection_boxes"])
+        frame = draw_boxes(frame,
+                           outputs_dict["Model Outputs"][image_name],
+                           model_classes)
+
+
         img = Image.fromarray(frame)
         img_name = f"{outputs_dict['Output directory']}/{image_name}.{outputs_dict['Extension']}"
         img.save(img_name)

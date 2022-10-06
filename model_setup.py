@@ -46,6 +46,7 @@ def load_yolo(name='yolov5s',
     print("Model loaded")
     return model, model_version, 'yolo'
 
+
 def load_tensorflow(model_url = MODEL_URL):
     import tensorflow as tf
     base_url = os.path.dirname(model_url) + "/"
@@ -63,7 +64,7 @@ def load_tensorflow(model_url = MODEL_URL):
     return model, model_name, model_type
 
 class Model:
-    def __init__(self, name, weights, version):
+    def __init__(self, name, weights, version, model_classes_file):
         self.load_fns = {
             'yolo': load_yolo,
             'resnet': load_tensorflow
@@ -74,6 +75,12 @@ class Model:
             'resnet50': self.resnet_forward,
             'yolo': self.yolo_forward
         }
+
+        if model_classes_file != "":
+            with open(model_classes_file) as stream:
+                self.classes = yaml.safe_load(stream)['names']
+        else:
+            self.classes = np.arange(0, 100)
 
     def __call__(self, img):
         return self.call_function_mapping[self.type](img)
