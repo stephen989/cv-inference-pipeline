@@ -2,10 +2,9 @@ from skimage.metrics import structural_similarity as compare_ssim
 import numpy as np
 from glob import glob
 import yaml
-import cv2  # , wandb
+import cv2
 import os
 from PIL import Image
-import pathlib
 
 def video_prepocessing(video):
     """
@@ -17,9 +16,6 @@ def video_prepocessing(video):
     frames = split_video(video)
     # remove blurry
     # frames, blurry_output = remove_blurry_frames(frames)
-    # remove duplicates
-    pass
-
     # outputs = [blurry_output]
     outputs = []
     print("Complete")
@@ -36,16 +32,16 @@ def image_preprocessing(image_dir, image_ext):
     """
     image_names = glob(f"{image_dir}/*{image_ext}")
     images_list = np.array([cv2.imread(file) for file in image_names], dtype=object)
+    if len(images_list) == 0:
+        raise ValueError(f"No {image_ext} files found in {image_dir}")
     images = []
-
     for image in images_list:
         try:
             images.append(cv2.cvtColor(np.array(image, dtype='uint8'), cv2.COLOR_BGR2RGB))
-        except:
-            print(f"Unable to read {image}")
+        except Exception as e:
+            print(f"Unable to read {image}.\n{str(e)}")
     if len(images) == 0:
-        raise ValueError(f"no images found in {image_dir}/*{image_ext}")
-    # images, blurry_output = remove_blurry_frames(images)
+        raise ValueError(f"unable to read images from {image_dir}/*{image_ext}")
     outputs = []
     return images, outputs, [image_name.split("\\")[-1] for image_name in image_names]
 
@@ -62,13 +58,14 @@ def split_video(video):
     while success:
         frames.append(frame)
         success, frame = video_capture.read()
-
+    if len(frames) == 0:
+        raise ValueError(f"Unable to retrieve any frames from {video}.")
     return np.array(frames)
 
 
 def parallel_laplacian_variance(file):
     """
-    not mine
+    not mine. not used
     :param file:
     :return:
     """
@@ -271,6 +268,7 @@ def draw_boxes(frame, model_output, model_classes):
         cv2.putText(frame, str(model_classes[class_]), (p1[0], p1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     return frame
 
+
 def create_video_writer(video_width, video_height, video_stream, output_path):
     """
     create and return video writes
@@ -286,6 +284,7 @@ def create_video_writer(video_width, video_height, video_stream, output_path):
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     return cv2.VideoWriter(output_path, fourcc, video_fps,
                            (video_width, video_height), True)
+
 
 def create_output_video(yaml_file, frames, output_video, video):
     """

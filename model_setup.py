@@ -1,5 +1,3 @@
-import torch
-
 from video_processing import *
 
 MODEL_URL = 'http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz'

@@ -13,9 +13,6 @@ def image_pipeline(opts):
     model_classes_file = opts.model_classes
 
     os.makedirs(image_output_dir, exist_ok=True)
-
-
-    # feed through model one by one
     frames, outputs, image_names = image_preprocessing(image_dir, image_ext)
     outputs_dict = {"Directory": image_dir,
                     "Extension": image_ext,
@@ -34,8 +31,10 @@ def image_pipeline(opts):
     # write to yaml file
     with open(output_yaml, 'w') as y:
         yaml.dump(outputs_dict, y)
-
+    print(f"Saved run output to {output_yaml}")
     create_output_images(output_yaml, frames,  image_output_dir)
+    print(f"Saved output images to {image_output_dir}")
+    return True
 
 
 def video_pipeline(opts):
@@ -57,14 +56,17 @@ def video_pipeline(opts):
 
     # feed through model one by one
     print("Feeding model")
-    for i, frame in enumerate(tqdm(frames)):
+    for i, frame in enumerate(tqdm(frames, unit="frame")):
         output = model(frame)
         outputs_dict["Model Outputs"][i] = output
     print("Complete")
     # write to yaml file
     with open(output_yaml, 'w') as y:
         yaml.dump(outputs_dict, y)
+    print(f"Saved run output to {output_yaml}")
     create_output_video(output_yaml, frames, output_video, video)
+    print(f"Saved output video to {output_video}")
+    return True
 
 
 
