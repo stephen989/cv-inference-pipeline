@@ -17,19 +17,9 @@ CLASS_LABELS = {1: "person", 2: "bicycle", 3: "car", 4: "motorcycle", 5: "airpla
                 78: "microwave", 79: "oven", 80: "toaster", 81: "sink", 82: "refrigerator", 84: "book", 85: "clock",
                 86: "vase", 87: "scissors", 88: "teddy bear", 89: "hair drier", 90: "toothbrush"}
 
+
 def fake_model():
     return None
-
-def load_model():
-    model_url = 'http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz'
-    base_url = os.path.dirname(model_url) + "/"
-    model_file = os.path.basename(model_url)
-    model_name = os.path.splitext(os.path.splitext(model_file)[0])[0]
-    model_dir = tf.keras.utils.get_file(fname=model_name, origin=base_url + model_file, untar=True)
-    model_dir = pathlib.Path(model_dir) / "saved_model"
-    model = tf.saved_model.load(str(model_dir))
-    model = model.signatures['serving_default']
-    return model
 
 
 def load_yolo(name='yolov5s',
@@ -47,7 +37,7 @@ def load_yolo(name='yolov5s',
     return model, model_version, 'yolo'
 
 
-def load_tensorflow(model_url = MODEL_URL):
+def load_tensorflow(model_url=MODEL_URL):
     import tensorflow as tf
     base_url = os.path.dirname(model_url) + "/"
     model_file = os.path.basename(model_url)
@@ -62,6 +52,7 @@ def load_tensorflow(model_url = MODEL_URL):
     model_type = "resnet50"
     print("Model loaded")
     return model, model_name, model_type
+
 
 class Model:
     def __init__(self, name, weights, version, model_classes_file):
@@ -80,7 +71,7 @@ class Model:
             with open(model_classes_file) as stream:
                 self.classes = yaml.safe_load(stream)['names']
         else:
-            self.classes = np.arange(0, 100)
+            self.classes = list(range(100))
 
     def __call__(self, img):
         return self.call_function_mapping[self.type](img)

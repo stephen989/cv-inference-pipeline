@@ -1,19 +1,16 @@
-import argparse
-import os
 from model_setup import *
-os.chdir("..")
+from tqdm import tqdm
 
 
-def image_main(opts):
+def image_pipeline(opts):
+
     image_dir = opts.image_dir
     image_ext = opts.image_ext
     image_output_dir = opts.image_output_dir
-    video = opts.video_input
-    output_video = opts.video_output
     output_yaml = opts.yaml_output
     model = opts.model
     weights = opts.weights
-    model_classes = opts.model_classes
+    model_classes_file = opts.model_classes
 
     os.makedirs(image_output_dir, exist_ok=True)
 
@@ -27,10 +24,10 @@ def image_main(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version, opts.model_classes)
+    model = Model(model, weights, opts.model_version, model_classes_file)
     outputs_dict["Model classes"] = model.classes
     print("Feeding model")
-    for image_name, frame in zip(image_names, frames):
+    for image_name, frame in tqdm(zip(image_names, frames)):
         output = model(frame)
         outputs_dict["Model Outputs"][image_name] = output
     print("Complete")
@@ -41,11 +38,7 @@ def image_main(opts):
     create_output_images(output_yaml, frames,  image_output_dir)
 
 
-
-def video_main(opts):
-    image_dir = opts.image_dir
-    image_ext = opts.image_ext
-    image_output_dir = opts.image_output_dir
+def video_pipeline(opts):
     video = opts.video_input
     output_video = opts.video_output
     output_yaml = opts.yaml_output
@@ -59,12 +52,12 @@ def video_main(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version, opts.model_classes)
+    model = Model(model, weights, opts.model_version, model_classes)
     outputs_dict["Model classes"] = model.classes
-    # feed through model one by one
 
+    # feed through model one by one
     print("Feeding model")
-    for i, frame in enumerate(frames):
+    for i, frame in enumerate(tqdm(frames)):
         output = model(frame)
         outputs_dict["Model Outputs"][i] = output
     print("Complete")
@@ -74,49 +67,7 @@ def video_main(opts):
     create_output_video(output_yaml, frames, output_video, video)
 
 
-def main(opts):
-    """
-    :param video: input video file path
-    :param output_video: output video file path
-    :param output_yaml: output yaml file path
-    :param load_model_fn: function to load and return model to be used
-    :param draw: if true, draw on image
-    :return: True if success
-    """
-    image_dir = opts.image_dir
-    image_ext = opts.image_ext
-    image_output_dir = opts.image_output_dir
-    video = opts.video_input
-    output_video = opts.video_output
-    output_yaml = opts.yaml_output
-    model = opts.model
-    weights = opts.weights
-
-    # preprocessing - split into frame, remove blurry and similar frames ???
-    if video != '':
-        video_main(opts)
-    else:
-        image_main(opts)
-    return True
 
 
-def parse_opt(known=False):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--image_dir', type=str, default='minidata/test/images')
-    parser.add_argument('--image_ext', type=str, default='.jpg')
-    parser.add_argument('--image_output_dir', type=str, default='output_images')
-    parser.add_argument('--video_input', type=str, default='')
-    parser.add_argument('--video_output', type=str, default='test_output.mp4')
-    parser.add_argument('--yaml_output', type=str, default='test_pipeline.yaml')
-    parser.add_argument('--model', type=str, default='yolo')
-    parser.add_argument('--model_version', type=str, default='yolov5s')
-    parser.add_argument('--weights', type=str, default='default')
-    parser.add_argument('--model_classes', type=str, default='minidata/data.yaml')
-
-    opt = parser.parse_known_args()[0] if known else parser.parse_args()
-    return opt
 
 
-if __name__ == "__main__":
-    opts = parse_opt()
-    main(opts)
