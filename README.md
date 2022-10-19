@@ -4,9 +4,9 @@ A computer vision inference pipeline for object detection that is designed for t
 
 ## Installation
 
-`git clone https://github.com/stephen989/cv-inference-pipeline/
+`git clone https://github.com/stephen989/cv-inference-pipeline/`
 
-pip install -r requirements.txt`
+`pip install -r requirements.txt`
 
 ## Usage for video
 Prebuit weights available from pytorch:
