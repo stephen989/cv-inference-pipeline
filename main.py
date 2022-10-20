@@ -15,7 +15,8 @@ def image_pipeline(opts):
     model_classes_file = opts.model_classes
 
     os.makedirs(image_output_dir, exist_ok=True)
-    frames, outputs, image_names = image_preprocessing(image_dir, image_ext)
+    image_preproc = ImagePreprocessor()
+    frames, outputs, image_names = image_preproc.preprocess_images(image_dir, image_ext)
     outputs_dict = {"Directory": image_dir,
                     "Extension": image_ext,
                     "Output directory": image_output_dir,
@@ -25,7 +26,7 @@ def image_pipeline(opts):
     model = Model(weights, opts.model_version, model_classes_file)
     outputs_dict["Model classes"] = model.classes
     print("Feeding model")
-    for image_name, frame in tqdm(zip(image_names, frames)):
+    for image_name, frame in tqdm(zip(image_names, frames), total=len(frames)):
         output = model(frame)
         outputs_dict["Model Outputs"][image_name] = output
     print("Complete")
@@ -44,7 +45,8 @@ def video_pipeline(opts):
     output_yaml = opts.yaml_output
     weights = opts.weights
     model_classes = opts.model_classes
-    frames, outputs = video_prepocessing(video)
+    video_preproc = VideoPreprocessor()
+    frames, outputs = video_preproc.preprocess_video(video)
     outputs_dict = {"File": video,
                     "Output Video": output_video,
                     "Preprocessing output": outputs,
@@ -77,8 +79,7 @@ def main(opts):
     video_input: video input file if using video pipeline
     video_output: output location for video file
     yaml_output: name/location for yaml output to be saved
-    model: type of model to be used. one of yolo or resnet (pls use yolo)
-    model_version: which model version to use if choosing yolo
+    model_version: which model version to use
     weights: location of saved weights to use if not loading default model
     model_classes: name/location of yaml file which maps model classes to numbers in "names"
     """
@@ -95,7 +96,7 @@ def parse_opt(known=False):
     parser.add_argument('--image_dir', type=str, default='minidata/test/images')
     parser.add_argument('--image_ext', type=str, default='.jpg')
     parser.add_argument('--image_output_dir', type=str, default='output_imagesbad')
-    parser.add_argument('--video_input', type=str, default='inference_pipeline/data/test.mp4')
+    parser.add_argument('--video_input', type=str, default='')
     parser.add_argument('--video_output', type=str, default='oil_output.mp4')
     parser.add_argument('--yaml_output', type=str, default='test_pipeline.yaml')
     parser.add_argument('--model_version', type=str, default='yolov5s')

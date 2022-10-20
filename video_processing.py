@@ -6,61 +6,69 @@ import cv2
 import os
 from PIL import Image
 
-def video_prepocessing(video):
-    """
-    :param video: video location
-    :return: array of processed frames
-    """
-    print("Preprocessing video")
-    # split into frames
-    frames = split_video(video)
-    # remove blurry
-    # frames, blurry_output = remove_blurry_frames(frames)
-    # outputs = [blurry_output]
-    outputs = []
-    print("Complete")
-    return frames, outputs
+
+class ImagePreprocessor:
+    def __init__(self):
+        self.params = {}
+
+    def preprocess_images(self, image_dir, image_ext):
+        """
+        get all images from folder and return them with output dict and list of image file names
+        for saving model outputs. Currently does not edit/remove/deblur images
+        :param image_dir:
+        :param image_ext:
+        :return:
+        """
+        image_names = glob(f"{image_dir}/*{image_ext}")
+        images_list = np.array([cv2.imread(file) for file in image_names], dtype=object)
+        if len(images_list) == 0:
+            raise ValueError(f"No {image_ext} files found in {image_dir}")
+        images = []
+        for image in images_list:
+            try:
+                images.append(cv2.cvtColor(np.array(image, dtype='uint8'), cv2.COLOR_BGR2RGB))
+            except Exception as e:
+                print(f"Unable to read {image}.\n{str(e)}")
+        if len(images) == 0:
+            raise ValueError(f"unable to read images from {image_dir}/*{image_ext}")
+        outputs = []
+        return images, outputs, [image_name.split("\\")[-1] for image_name in image_names]
 
 
-def image_preprocessing(image_dir, image_ext):
-    """
-    get all images from folder and return them with output dict and list of image file names
-    for saving model outputs. Currently does not edit/remove/deblur images
-    :param image_dir:
-    :param image_ext:
-    :return:
-    """
-    image_names = glob(f"{image_dir}/*{image_ext}")
-    images_list = np.array([cv2.imread(file) for file in image_names], dtype=object)
-    if len(images_list) == 0:
-        raise ValueError(f"No {image_ext} files found in {image_dir}")
-    images = []
-    for image in images_list:
-        try:
-            images.append(cv2.cvtColor(np.array(image, dtype='uint8'), cv2.COLOR_BGR2RGB))
-        except Exception as e:
-            print(f"Unable to read {image}.\n{str(e)}")
-    if len(images) == 0:
-        raise ValueError(f"unable to read images from {image_dir}/*{image_ext}")
-    outputs = []
-    return images, outputs, [image_name.split("\\")[-1] for image_name in image_names]
+class VideoPreprocessor(ImagePreprocessor):
+    def __int__(self):
+        self.params = {}
 
+    def preprocess_video(self, video):
+        """
+        :param video: video location
+        :return: array of processed frames
+        """
+        print("Preprocessing video")
+        # split into frames
+        frames = self.split_video(video)
+        # remove blurry
+        # frames, blurry_output = remove_blurry_frames(frames)
+        # outputs = [blurry_output]
+        outputs = []
+        print("Complete")
+        return frames, outputs
 
-def split_video(video):
-    """
-    splits video file into individual frames and returns them as array
-    :param video: location
-    :return: array of frames
-    """
-    frames = []
-    video_capture = cv2.VideoCapture(video)
-    success, frame = video_capture.read()
-    while success:
-        frames.append(frame)
+    def split_video(self, video):
+        """
+        splits video file into individual frames and returns them as array
+        :param video: location
+        :return: array of frames
+        """
+        frames = []
+        video_capture = cv2.VideoCapture(video)
         success, frame = video_capture.read()
-    if len(frames) == 0:
-        raise ValueError(f"Unable to retrieve any frames from {video}.")
-    return np.array(frames)
+        while success:
+            frames.append(frame)
+            success, frame = video_capture.read()
+        if len(frames) == 0:
+            raise ValueError(f"Unable to retrieve any frames from {video}.")
+        return np.array(frames)
 
 
 def parallel_laplacian_variance(file):
