@@ -21,7 +21,7 @@ def image_pipeline(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version, model_classes_file)
+    model = Model(weights, opts.model_version, model_classes_file)
     outputs_dict["Model classes"] = model.classes
     print("Feeding model")
     for image_name, frame in tqdm(zip(image_names, frames)):
@@ -51,7 +51,7 @@ def video_pipeline(opts):
                     "Preprocessing output": outputs,
                     "Model Outputs": dict()}
 
-    model = Model(model, weights, opts.model_version, model_classes)
+    model = Model(weights, opts.model_version, model_classes)
     outputs_dict["Model classes"] = model.classes
 
     # feed through model one by one
