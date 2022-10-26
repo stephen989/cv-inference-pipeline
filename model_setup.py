@@ -1,4 +1,4 @@
-from video_processing import *
+from .video_processing import *
 import torch
 
 

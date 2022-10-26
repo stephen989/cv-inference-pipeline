@@ -1,11 +1,15 @@
 import argparse
-from model_setup import *
+from .model_setup import Model
 from tqdm import tqdm
+import os
+from .model_setup import *
 
-os.chdir("..")
 
 
 def image_pipeline(opts):
+    """
+    See function: main for docs
+    """
 
     image_dir = opts.image_dir
     image_ext = opts.image_ext
@@ -40,6 +44,9 @@ def image_pipeline(opts):
 
 
 def video_pipeline(opts):
+    """
+    See function: main for docs
+    """
     video = opts.video_input
     output_video = opts.video_output
     output_yaml = opts.yaml_output
@@ -108,5 +115,7 @@ def parse_opt(known=False):
 
 
 if __name__ == "__main__":
+    
+    os.chdir("..")
     options = parse_opt()
     main(options)
