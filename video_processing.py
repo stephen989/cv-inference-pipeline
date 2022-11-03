@@ -46,13 +46,12 @@ class VideoPreprocessor(ImagePreprocessor):
         """
         print("Preprocessing video")
         # split into frames
-        frames = self.split_video(video)
+        frames, fps = self.split_video(video)
         # remove blurry
         # frames, blurry_output = remove_blurry_frames(frames)
         # outputs = [blurry_output]
-        outputs = []
         print("Complete")
-        return frames, outputs
+        return frames[:3], fps
 
     def split_video(self, video):
         """
@@ -68,7 +67,7 @@ class VideoPreprocessor(ImagePreprocessor):
             success, frame = video_capture.read()
         if len(frames) == 0:
             raise ValueError(f"Unable to retrieve any frames from {video}.")
-        return np.array(frames)
+        return np.array(frames), video_capture.get(cv2.CAP_PROP_FPS)
 
 
 def parallel_laplacian_variance(file):
@@ -261,40 +260,37 @@ def remove_duplicates(folder_name, extension, delete_frames=False):
             'Duplicate Frame Ratio': duplicate_ratio, 'Similarity Cutoffs': cutoffs}
 
 
-def draw_boxes(frame, model_output, model_classes):
+def draw_boxes(frame, model_output):
     """
     function to draw boxes around detected objects and label them with class
     :param frame: image as array
-    :param model_output: model output section of model output yaml file (dict)
-    :param model_classes: list of class names for model or list of integers if none found
+    :param model_output: [[x1, y1, x2, y2, class, conf]]
     :return: annotated frame as array
     """
-    boxes = model_output['detection_boxes']
-    classes = model_output['detection_classes']
-    for (p1, p2), class_ in zip(boxes, classes):
-        cv2.rectangle(frame, tuple(p1), tuple(p2), color=(0, 0, 255))
-        cv2.putText(frame, str(model_classes[class_]), (p1[0], p1[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+
+    for (x1, y1, x2, y2, clss, conf) in model_output:
+        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color=(0, 0, 255))
+        # cv2.putText(frame, str(int(id)), (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
     return frame
 
 
-def create_video_writer(video_width, video_height, video_stream, output_path):
+def create_video_writer(video_width, video_height, fps, output_path):
     """
     create and return video writes
     :param video_width:
     :param video_height:
-    :param video_stream: input video source (for fps)
+    :param fps: input video source (for fps)
     :param output_path:
     :return: video writer
     """
     # Getting the fps of the source video
-    video_fps = video_stream.get(cv2.CAP_PROP_FPS)
     # initialize our video writer
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    return cv2.VideoWriter(output_path, fourcc, video_fps,
+    return cv2.VideoWriter(output_path, fourcc, fps,
                            (video_width, video_height), True)
 
 
-def create_output_video(yaml_file, frames, output_video, video):
+def create_output_video(frames, model_outputs, output_video, fps):
     """
     create output video with annotations and labels
     :param yaml_file: model output file name
@@ -303,14 +299,10 @@ def create_output_video(yaml_file, frames, output_video, video):
     :param video: original input video
     :return: None
     """
-    with open(yaml_file) as stream:
-        outputs_dict = yaml.safe_load(stream)
-    model_classes = outputs_dict["Model classes"]
-    video_stream = cv2.VideoCapture(video)
     video_height, video_width, _ = frames[0].shape
-    writer = create_video_writer(video_width, video_height, video_stream, output_video)
+    writer = create_video_writer(video_width, video_height, fps, output_video)
     for i, frame in enumerate(frames):
-        frame = draw_boxes(frame, outputs_dict['Model Outputs'][i], model_classes)
+        frame = draw_boxes(frame, model_outputs[i])
         writer.write(frame)
     writer.release()
     return True

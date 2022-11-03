@@ -39,4 +39,24 @@ class Model:
                        "detection_classes": prediction_classes,
                        "detection_scores": prediction_scores,
                        "num_detections": len(coords)}
-        return output_dict
+        print(output_dict["detection_boxes"])
+
+        # [[x1, y1], [x2, y2]] to [x1, y1, x2, y2]
+        x = np.array(output_dict["detection_boxes"])
+        x= x.reshape(len(x),-1)
+        print(x)
+        
+        confs = np.expand_dims(np.array(output_dict['detection_scores']), 1)
+        clss = np.expand_dims(np.array(output_dict['detection_classes']), 1)
+        print(np.hstack([x, confs, clss]))
+        return np.hstack([x, confs, clss])
+
+    def xywh_convert(model_output):
+            x = model_output['detection_boxes']
+            x = np.array(x)
+            y = np.zeros((x.shape[0], 4))
+            y[:,:2] = x.mean(1)
+            y[:,2] = x[:,1,0] - x[:,0,0]
+            y[:,3] = x[:,1,1] - x[:,0,1]
+            y = np.abs(y)
+            return y

@@ -43,41 +43,68 @@ def image_pipeline(opts):
     return True
 
 
-def video_pipeline(opts):
+def video_pipeline(
+        video_input='videos/test.mp4',
+        video_output='oil_output.mp4',
+        yaml_output='test_pipeline.yaml',
+        model_version='yolov5s',
+        weights='default',
+        model_classes=''):
     """
     See function: main for docs
     """
-    video = opts.video_input
-    output_video = opts.video_output
-    output_yaml = opts.yaml_output
-    weights = opts.weights
-    model_classes = opts.model_classes
+    video = video_input
+    output_yaml=yaml_output
     video_preproc = VideoPreprocessor()
-    frames, outputs = video_preproc.preprocess_video(video)
+    frames, FPS = video_preproc.preprocess_video(video)
     outputs_dict = {"File": video,
-                    "Output Video": output_video,
-                    "Preprocessing output": outputs,
+                    "Output Video": video_output,
                     "Model Outputs": dict()}
 
-    model = Model(weights, opts.model_version, model_classes)
+    model = Model(weights, model_version, model_classes)
     outputs_dict["Model classes"] = model.classes
 
     # feed through model one by one
     print("Feeding model")
+    model_outputs = list()
     for i, frame in enumerate(tqdm(frames, unit="frame")):
         output = model(frame)
+        model_outputs.append(output)
         outputs_dict["Model Outputs"][i] = output
     print("Complete")
-    # write to yaml file
-    with open(output_yaml, 'w') as y:
-        yaml.dump(outputs_dict, y)
-    print(f"Saved run output to {output_yaml}")
-    create_output_video(output_yaml, frames, output_video, video)
-    print(f"Saved output video to {output_video}")
+    create_output_video(frames, model_outputs, video_output, FPS)
+    print(f"Saved output video to {video_output}")
     return True
 
 
-def main(opts):
+
+
+
+def parse_opt(known=False):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--image_dir', type=str, default='minidata/test/images')
+    parser.add_argument('--image_ext', type=str, default='.jpg')
+    parser.add_argument('--image_output_dir', type=str, default='output_imagesbad')
+    parser.add_argument('--video_input', type=str, default='data/test.mp4')
+    parser.add_argument('--video_output', type=str, default='oil_output.mp4')
+    parser.add_argument('--yaml_output', type=str, default='test_pipeline.yaml')
+    parser.add_argument('--model_version', type=str, default='yolov5s')
+    parser.add_argument('--weights', type=str, default='default')
+    parser.add_argument('--model_classes', type=str, default='')
+
+    opt = parser.parse_known_args()[0] if known else parser.parse_args()
+    return opt
+
+
+def main(image_dir='minidata/test/images',
+        image_ext='.jpg',
+        image_output_dir='output_imagesbad',
+        video_input='data/test.mp4',
+        video_output='oil_output.mp4',
+        yaml_output='test_pipeline.yaml',
+        model_version='yolov5s',
+        weights='default',
+        model_classes=''):
     """
     :param opts: command line options input
     image_dir: directory of input images (if using image pipeline)
@@ -92,30 +119,26 @@ def main(opts):
     """
     video = opts.video_input
     if video != '':
-        video_pipeline(opts)
+        video_pipeline(image_dir,
+                        image_ext,
+                        image_output_dir,
+                        video_input,
+                        video_output,
+                        yaml_output,
+                        model_version,
+                        weights,
+                        model_classes)
     else:
-        image_pipeline(opts)
+        image_pipeline(image_dir,
+                        image_ext,
+                        image_output_dir,
+                        yaml_output,
+                        model_version,
+                        weights,
+                        model_classes)
     return True
-
-
-def parse_opt(known=False):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--image_dir', type=str, default='minidata/test/images')
-    parser.add_argument('--image_ext', type=str, default='.jpg')
-    parser.add_argument('--image_output_dir', type=str, default='output_imagesbad')
-    parser.add_argument('--video_input', type=str, default='')
-    parser.add_argument('--video_output', type=str, default='oil_output.mp4')
-    parser.add_argument('--yaml_output', type=str, default='test_pipeline.yaml')
-    parser.add_argument('--model_version', type=str, default='yolov5s')
-    parser.add_argument('--weights', type=str, default='default')
-    parser.add_argument('--model_classes', type=str, default='')
-
-    opt = parser.parse_known_args()[0] if known else parser.parse_args()
-    return opt
-
 
 if __name__ == "__main__":
     
     os.chdir("..")
-    options = parse_opt()
-    main(options)
+    main(parse_opt())
